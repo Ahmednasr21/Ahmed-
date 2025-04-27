@@ -1,0 +1,26 @@
+/* Basic starter for "Logo Pro" platform using Next.js (React) + NextAuth + Prisma + Stripe
+
+Structure: / pages/ index.js       # Homepage grid of logos _app.js        # App wrapper admin.js       # Admin dashboard api/ auth/[...nextauth].js logos.js     # GET/POST logos purchase.js  # POST purchase components/ NavBar.js      # Top navigation (Settings, Profile, Balance) LogoCard.js    # Card component for each logo LogoDetail.js  # Modal or detail view prisma/ schema.prisma  # Database schema .env.local        # Environment variables
+
+*/
+
+// package.json (dependencies) // { //   "name": "logo-pro", //   "version": "1.0.0", //   "scripts": { //     "dev": "next dev", //     "build": "next build", //     "start": "next start" //   }, //   "dependencies": { //     "react": "^18.2.0", //     "next": "^13.4.4", //     "@prisma/client": "^4.15.0", //     "prisma": "^4.15.0", //     "stripe": "^12.6.0", //     "next-auth": "^4.23.1", //     "tailwindcss": "^3.3.2", //     "@tailwindcss/forms": "^0.5.4" //   } // }
+
+// tailwind.config.js module.exports = { content: ["./pages//*.{js,jsx}", "./components//*.{js,jsx}"], theme: { extend: {} }, plugins: [require('@tailwindcss/forms')], };
+
+// prisma/schema.prisma // datasource db { //   provider = "postgresql" //   url      = env("DATABASE_URL") // } // generator client { //   provider = "prisma-client-js" // } // model User { //   id       String  @id @default(cuid()) //   name     String? //   email    String  @unique //   balance  Int     @default(0) //   logos    Logo[]  @relation("UploadedLogos") // } // model Logo { //   id          String   @id @default(cuid()) //   title       String //   description String //   keywords    String[] //   url         String //   price       Int      @default(5) //   owner       User     @relation("UploadedLogos", fields: [ownerId], references: [id]) //   ownerId     String //   createdAt   DateTime @default(now()) // }
+
+// pages/_app.js import '../styles/globals.css'; import { SessionProvider } from 'next-auth/react'; export default function App({ Component, pageProps }) { return ( <SessionProvider session={pageProps.session}> <Component {...pageProps} /> </SessionProvider> ); }
+
+// components/NavBar.js import Link from 'next/link'; import { useSession } from 'next-auth/react'; export default function NavBar() { const { data: session } = useSession(); return ( <nav className="flex justify-between p-4 bg-gradient-to-r from-blue-800 to-blue-400 text-white"> <div className="text-xl font-bold">Logo Pro</div> <div className="flex space-x-4"> <Link href="/settings"><a>⚙️</a></Link> {session ? <Link href="/profile"><a>👤</a></Link> : null} {session ? <Link href="/balance"><a>💰</a></Link> : null} </div> </nav> ); }
+
+// components/LogoCard.js import Link from 'next/link'; export default function LogoCard({ logo }) { return ( <div className="border rounded-lg overflow-hidden hover:shadow-lg transition p-2"> <img src={logo.url} alt={logo.title} className="w-full h-48 object-cover" /> <h3 className="mt-2 font-semibold">{logo.title}</h3> <p className="mt-1">5 €</p> <Link href={/logos/${logo.id}}> <a className="mt-2 inline-block px-4 py-2 bg-orange-500 text-white rounded-lg">تفاصيل</a> </Link> </div> ); }
+
+// pages/index.js import NavBar from '../components/NavBar'; import LogoCard from '../components/LogoCard'; import prisma from '../lib/prisma';
+
+export async function getServerSideProps() { const logos = await prisma.logo.findMany({ take: 20, orderBy: { createdAt: 'desc' } }); return { props: { logos } }; }
+
+export default function Home({ logos }) { return ( <> <NavBar /> <main className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> {logos.map((logo) => <LogoCard key={logo.id} logo={logo} />)} </main> </> ); }
+
+// ... Additional files (admin.js, api routes) would follow similar patterns
+
